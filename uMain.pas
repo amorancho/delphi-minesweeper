@@ -5,7 +5,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.ExtCtrls, Vcl.StdCtrls,
-  Vcl.Buttons;
+  Vcl.Buttons, System.Generics.Collections, dxGDIPlusClasses, System.ImageList,
+  Vcl.ImgList;
 
 type
 
@@ -13,18 +14,21 @@ type
   TEstadoPartida = (epPartida, epDerrota);
   TEstadoCasilla = (ecTapado, ecMarcaBomba, ecInterrogante);
 
-  TCasilla = record
-    Estado: TEstadoCasilla;
+  TCasilla = class
+  public
+    Estado:      TEstadoCasilla;
     BombasCerca: integer;
-    Bomba: boolean;
+    Bomba:       boolean;
+
+    constructor Create(_Estado: TEstadoCasilla; _BombasCerca: integer; _Bomba: boolean);
   end;
 
-  TForm2 = class(TForm)
+  TFMain = class(TForm)
     Pn_Info: TPanel;
     Pn_Game: TPanel;
     Ed_NumMines: TEdit;
     Ed_Time: TEdit;
-    Button1: TButton;
+    Bt_NuevaPartida: TButton;
     Pn_Level: TPanel;
     SpeedButton1: TSpeedButton;
     SpeedButton2: TSpeedButton;
@@ -94,16 +98,33 @@ type
     Panel87: TPanel;
     Panel88: TPanel;
     Timer: TTimer;
+    Image1: TImage;
+    Image2: TImage;
+    Image3: TImage;
+    Image4: TImage;
+    Image5: TImage;
+    Image6: TImage;
+    Image7: TImage;
+    Image9: TImage;
+    Image10: TImage;
+    Image11: TImage;
+    Image8: TImage;
+    Image12: TImage;
+    ImageList1: TImageList;
     procedure FormCreate(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
+    procedure Bt_NuevaPartidaClick(Sender: TObject);
+    procedure PanelMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
   private
     { Private declarations }
 
-    Tablero: array[1..8, 1..8] of TCasilla;
+    Casillas: TDictionary<string, TCasilla>;
     Nivel: TNivelPartida;
     NumBombas: integer;
     Tiempo: integer;
+    Bombas: TList<string>;
+    Estado: TEstadoPartida;
 
     procedure Inicia;
     procedure InicializaTablero;
@@ -111,40 +132,133 @@ type
     procedure SetNivel(N: TNivelPartida);
     procedure SetDisplays;
     procedure IniciaTiempo;
+    procedure AsignaEventos;
+    procedure IndicaBombasCercanas;
   public
     { Public declarations }
+
+    procedure ClicaCasilla(Sender: TObject);
   end;
 
 var
-  Form2: TForm2;
+  FMain: TFMain;
 
 implementation
+
+uses
+  Math;
 
 {$R *.dfm}
 
 { TForm2 }
 
-procedure TForm2.Button1Click(Sender: TObject);
+procedure TFMain.AsignaEventos;
+var
+  Panel: TPanel;
+  X, Y: integer;
+begin
+
+  for X := 1 to 8 do
+  begin
+
+    for Y := 1 to 8 do
+    begin
+
+      Panel := TPanel(FindComponent(concat('Panel', X.ToString, Y.ToString)));
+
+      Panel.OnClick := ClicaCasilla;
+      Panel.OnMouseDown := PanelMouseDown;
+
+    end;
+
+  end;
+
+end;
+
+procedure TFMain.Bt_NuevaPartidaClick(Sender: TObject);
 begin
   Inicia;
 end;
 
-procedure TForm2.ColocarBombas;
+procedure TFMain.ClicaCasilla(Sender: TObject);
 begin
-  //
+
+  if Casillas.Items[TPanel(Sender).Name].Bomba then
+  begin
+    ShowMessage('¡Bomba!');
+    Estado := epDerrota;
+  end;
+
 end;
 
-procedure TForm2.FormCreate(Sender: TObject);
+procedure TFMain.ColocarBombas;
+var
+  X, Y, I: integer;
+  BombasColocadas: boolean;
+  Casilla: TCasilla;
+  Panel: TPanel;
 begin
+
+  Bombas.Clear;
+
+  BombasColocadas := false;
+
+  while (not BombasColocadas) do
+  begin
+
+    X := RandomRange(1, 9);
+    Y := RandomRange(1, 9);
+
+    if not Bombas.Contains(concat(X.ToString, Y.ToString)) then
+      Bombas.Add(concat(X.ToString, Y.ToString));
+
+    if (Bombas.Count = NumBombas) then
+      BombasColocadas := true;
+
+  end;
+
+  for I := 0 to Bombas.Count - 1 do
+  begin
+    Casilla := Casillas.Items[concat('Panel', Bombas.Items[I])];
+    Casilla.Bomba := true;
+  end;
+
+end;
+
+
+procedure TFMain.FormCreate(Sender: TObject);
+begin
+
+  Casillas := TDictionary<string, TCasilla>.Create;
+  Bombas := TList<string>.Create;
 
   SetNivel(npPrincipiante);
 
   Inicia;
 
+  AsignaEventos;
+
 end;
 
-procedure TForm2.Inicia;
+procedure TFMain.IndicaBombasCercanas;
+var
+  I: Integer;
 begin
+
+  for I := 0 to Casillas.Count - 1 do
+  begin
+
+    //
+
+  end;
+
+end;
+
+procedure TFMain.Inicia;
+begin
+
+  Estado := epPartida;
+
   InicializaTablero;
 
   SetDisplays;
@@ -152,21 +266,27 @@ begin
   IniciaTiempo;
 end;
 
-procedure TForm2.InicializaTablero;
+procedure TFMain.InicializaTablero;
 var
   X: Integer;
   Y: Integer;
+  PanelName: string;
 begin
 
-  //for X := 1 to 4 do
-  //  for Y := 1 to 4 do
-  //    Tablero[X, Y] := 0;
+  Casillas.Clear;
+
+  for X := 1 to 8 do
+    for Y := 1 to 8 do
+      Casillas.Add(concat('Panel', X.ToString, Y.ToString), TCasilla.Create(ecTapado, 0, false));
 
   ColocarBombas;
+  IndicaBombasCercanas;
+
+  ImageList1.GetBitmap(1, Image11.Picture.Bitmap);
 
 end;
 
-procedure TForm2.IniciaTiempo;
+procedure TFMain.IniciaTiempo;
 begin
 
   Tiempo := 0;
@@ -175,12 +295,62 @@ begin
 
 end;
 
-procedure TForm2.SetDisplays;
+procedure TFMain.PanelMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  Image: TImage;
+  Panel: TPanel;
+  I: Integer;
+begin
+
+  if Sender.ClassName = 'TImage' then
+  begin
+    PanelMouseDown(TImage(Sender).Parent, Button, Shift, X, Y);
+    exit;
+  end;
+
+  if Button = TMouseButton.mbRight then
+  begin
+
+    Panel := TPanel(Sender);
+
+    if Casillas.Items[Panel.Name].Estado = ecTapado then
+    begin
+
+      Casillas.Items[Panel.Name].Estado := ecMarcaBomba;
+
+      Image := TImage.Create(Panel);
+      Image.Parent := Panel;
+      Image.Height := 20;
+      Image.Width  := 20;
+      Image.Left   := 10;
+      Image.Top    := 10;
+      Image.Stretch := true;
+      Image.Picture.LoadFromFile( 'flag.png');
+      Image.OnMouseDown := PanelMouseDown;
+
+    end
+    else if Casillas.Items[Panel.Name].Estado = ecMarcaBomba then
+    begin
+      Panel.Caption := '?';
+      Casillas.Items[Panel.Name].Estado := ecInterrogante;
+    end
+    else if Casillas.Items[Panel.Name].Estado = ecInterrogante then
+    begin
+      Panel.Caption := '';
+      Casillas.Items[Panel.Name].Estado := ecTapado;
+    end;
+
+  end;
+
+end;
+
+procedure TFMain.SetDisplays;
 begin
   Ed_NumMines.Text := NumBombas.ToString.PadLeft(3, '0');
 end;
 
-procedure TForm2.SetNivel(N: TNivelPartida);
+procedure TFMain.SetNivel(N: TNivelPartida);
 begin
 
   if N = npPrincipiante then
@@ -198,11 +368,21 @@ begin
 
 end;
 
-procedure TForm2.TimerTimer(Sender: TObject);
+procedure TFMain.TimerTimer(Sender: TObject);
 begin
   Tiempo := Tiempo + 1;
 
   Ed_Time.Text := Tiempo.ToString.PadLeft(3, '0');
+end;
+
+{ TCasilla }
+
+constructor TCasilla.Create(_Estado: TEstadoCasilla; _BombasCerca: integer;
+  _Bomba: boolean);
+begin
+  Self.Estado      := _Estado;
+  Self.BombasCerca := _BombasCerca;
+  Self.Bomba       := _Bomba;
 end;
 
 end.
