@@ -33,95 +33,83 @@ type
     SpeedButton1: TSpeedButton;
     SpeedButton2: TSpeedButton;
     SpeedButton3: TSpeedButton;
-    Panel11: TPanel;
-    Panel12: TPanel;
-    Panel13: TPanel;
-    Panel14: TPanel;
-    Panel15: TPanel;
-    Panel16: TPanel;
-    Panel17: TPanel;
-    Panel18: TPanel;
-    Panel21: TPanel;
-    Panel22: TPanel;
-    Panel23: TPanel;
-    Panel24: TPanel;
-    Panel25: TPanel;
-    Panel26: TPanel;
-    Panel27: TPanel;
-    Panel28: TPanel;
-    Panel31: TPanel;
-    Panel32: TPanel;
-    Panel33: TPanel;
-    Panel34: TPanel;
-    Panel35: TPanel;
-    Panel36: TPanel;
-    Panel37: TPanel;
-    Panel38: TPanel;
-    Panel41: TPanel;
-    Panel42: TPanel;
-    Panel43: TPanel;
-    Panel44: TPanel;
-    Panel45: TPanel;
-    Panel46: TPanel;
-    Panel47: TPanel;
-    Panel48: TPanel;
-    Panel51: TPanel;
-    Panel52: TPanel;
-    Panel53: TPanel;
-    Panel54: TPanel;
-    Panel55: TPanel;
-    Panel56: TPanel;
-    Panel57: TPanel;
-    Panel58: TPanel;
-    Panel61: TPanel;
-    Panel62: TPanel;
-    Panel63: TPanel;
-    Panel64: TPanel;
-    Panel65: TPanel;
-    Panel66: TPanel;
-    Panel67: TPanel;
-    Panel68: TPanel;
-    Panel71: TPanel;
-    Panel72: TPanel;
-    Panel73: TPanel;
-    Panel74: TPanel;
-    Panel75: TPanel;
-    Panel76: TPanel;
-    Panel77: TPanel;
-    Panel78: TPanel;
-    Panel81: TPanel;
-    Panel82: TPanel;
-    Panel83: TPanel;
-    Panel84: TPanel;
-    Panel85: TPanel;
-    Panel86: TPanel;
-    Panel87: TPanel;
-    Panel88: TPanel;
     Timer: TTimer;
-    Image1: TImage;
-    Image2: TImage;
-    Image3: TImage;
-    Image4: TImage;
-    Image5: TImage;
-    Image6: TImage;
-    Image7: TImage;
-    Image9: TImage;
-    Image10: TImage;
+    ImageList: TImageList;
     Image11: TImage;
-    Image8: TImage;
     Image12: TImage;
-    ImageList1: TImageList;
+    Image13: TImage;
+    Image14: TImage;
+    Image15: TImage;
+    Image16: TImage;
+    Image17: TImage;
+    Image18: TImage;
+    Image21: TImage;
+    Image22: TImage;
+    Image23: TImage;
+    Image24: TImage;
+    Image25: TImage;
+    Image26: TImage;
+    Image27: TImage;
+    Image28: TImage;
+    Image31: TImage;
+    Image32: TImage;
+    Image33: TImage;
+    Image34: TImage;
+    Image35: TImage;
+    Image36: TImage;
+    Image37: TImage;
+    Image38: TImage;
+    Image41: TImage;
+    Image42: TImage;
+    Image43: TImage;
+    Image44: TImage;
+    Image45: TImage;
+    Image46: TImage;
+    Image47: TImage;
+    Image48: TImage;
+    Image51: TImage;
+    Image52: TImage;
+    Image53: TImage;
+    Image54: TImage;
+    Image55: TImage;
+    Image56: TImage;
+    Image57: TImage;
+    Image58: TImage;
+    Image61: TImage;
+    Image62: TImage;
+    Image63: TImage;
+    Image64: TImage;
+    Image65: TImage;
+    Image66: TImage;
+    Image67: TImage;
+    Image68: TImage;
+    Image71: TImage;
+    Image72: TImage;
+    Image73: TImage;
+    Image74: TImage;
+    Image75: TImage;
+    Image76: TImage;
+    Image77: TImage;
+    Image78: TImage;
+    Image81: TImage;
+    Image82: TImage;
+    Image83: TImage;
+    Image84: TImage;
+    Image85: TImage;
+    Image86: TImage;
+    Image87: TImage;
+    Image88: TImage;
     procedure FormCreate(Sender: TObject);
     procedure TimerTimer(Sender: TObject);
     procedure Bt_NuevaPartidaClick(Sender: TObject);
-    procedure PanelMouseDown(Sender: TObject; Button: TMouseButton;
-      Shift: TShiftState; X, Y: Integer);
+
   private
     { Private declarations }
 
     Casillas: TDictionary<string, TCasilla>;
     Nivel: TNivelPartida;
     NumBombas: integer;
+    NumBombasColocadas: integer;
     Tiempo: integer;
     Bombas: TList<string>;
     Estado: TEstadoPartida;
@@ -138,6 +126,8 @@ type
     { Public declarations }
 
     procedure ClicaCasilla(Sender: TObject);
+    procedure ImageMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
   end;
 
 var
@@ -154,7 +144,7 @@ uses
 
 procedure TFMain.AsignaEventos;
 var
-  Panel: TPanel;
+  Image: TImage;
   X, Y: integer;
 begin
 
@@ -164,10 +154,10 @@ begin
     for Y := 1 to 8 do
     begin
 
-      Panel := TPanel(FindComponent(concat('Panel', X.ToString, Y.ToString)));
+      Image := TImage(FindComponent(concat('Image', X.ToString, Y.ToString)));
 
-      Panel.OnClick := ClicaCasilla;
-      Panel.OnMouseDown := PanelMouseDown;
+      Image.OnClick     := ClicaCasilla;
+      Image.OnMouseDown := ImageMouseDown;
 
     end;
 
@@ -183,7 +173,7 @@ end;
 procedure TFMain.ClicaCasilla(Sender: TObject);
 begin
 
-  if Casillas.Items[TPanel(Sender).Name].Bomba then
+  if Casillas.Items[TImage(Sender).Name].Bomba then
   begin
     ShowMessage('¡Bomba!');
     Estado := epDerrota;
@@ -196,7 +186,7 @@ var
   X, Y, I: integer;
   BombasColocadas: boolean;
   Casilla: TCasilla;
-  Panel: TPanel;
+  Image: TImage;
 begin
 
   Bombas.Clear;
@@ -219,7 +209,7 @@ begin
 
   for I := 0 to Bombas.Count - 1 do
   begin
-    Casilla := Casillas.Items[concat('Panel', Bombas.Items[I])];
+    Casilla := Casillas.Items[concat('Image', Bombas.Items[I])];
     Casilla.Bomba := true;
   end;
 
@@ -233,6 +223,7 @@ begin
   Bombas := TList<string>.Create;
 
   SetNivel(npPrincipiante);
+  NumBombasColocadas := 0;
 
   Inicia;
 
@@ -277,12 +268,10 @@ begin
 
   for X := 1 to 8 do
     for Y := 1 to 8 do
-      Casillas.Add(concat('Panel', X.ToString, Y.ToString), TCasilla.Create(ecTapado, 0, false));
+      Casillas.Add(concat('Image', X.ToString, Y.ToString), TCasilla.Create(ecTapado, 0, false));
 
   ColocarBombas;
   IndicaBombasCercanas;
-
-  ImageList1.GetBitmap(1, Image11.Picture.Bitmap);
 
 end;
 
@@ -295,51 +284,61 @@ begin
 
 end;
 
-procedure TFMain.PanelMouseDown(Sender: TObject; Button: TMouseButton;
+procedure TFMain.ImageMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
   Image: TImage;
-  Panel: TPanel;
   I: Integer;
+  ret: boolean;
 begin
-
-  if Sender.ClassName = 'TImage' then
-  begin
-    PanelMouseDown(TImage(Sender).Parent, Button, Shift, X, Y);
-    exit;
-  end;
 
   if Button = TMouseButton.mbRight then
   begin
 
-    Panel := TPanel(Sender);
+    Image := TImage(Sender);
 
-    if Casillas.Items[Panel.Name].Estado = ecTapado then
+    if Casillas.Items[Image.Name].Estado = ecTapado then
     begin
 
-      Casillas.Items[Panel.Name].Estado := ecMarcaBomba;
+      if NumBombas > NumBombasColocadas then
+      begin
 
-      Image := TImage.Create(Panel);
-      Image.Parent := Panel;
-      Image.Height := 20;
-      Image.Width  := 20;
-      Image.Left   := 10;
-      Image.Top    := 10;
-      Image.Stretch := true;
-      Image.Picture.LoadFromFile( 'flag.png');
-      Image.OnMouseDown := PanelMouseDown;
+        Image.Picture.Assign(nil);
+
+        NumBombasColocadas := NumBombasColocadas + 1;
+
+        Casillas.Items[Image.Name].Estado := ecMarcaBomba;
+        ret := ImageList.GetBitmap(9, Image.Picture.Bitmap);
+
+      end;
 
     end
-    else if Casillas.Items[Panel.Name].Estado = ecMarcaBomba then
+    else if Casillas.Items[Image.Name].Estado = ecMarcaBomba then
     begin
-      Panel.Caption := '?';
-      Casillas.Items[Panel.Name].Estado := ecInterrogante;
+
+      Image.Picture.Assign(nil);
+
+      NumBombasColocadas := NumBombasColocadas - 1;
+
+      Casillas.Items[Image.Name].Estado := ecInterrogante;
+      ret := ImageList.GetBitmap(13, Image.Picture.Bitmap);
+
     end
-    else if Casillas.Items[Panel.Name].Estado = ecInterrogante then
+    else if Casillas.Items[Image.Name].Estado = ecInterrogante then
     begin
-      Panel.Caption := '';
-      Casillas.Items[Panel.Name].Estado := ecTapado;
+
+      Image.Picture.Assign(nil);
+
+      Casillas.Items[Image.Name].Estado := ecTapado;
+      ret := ImageList.GetBitmap(0, Image.Picture.Bitmap);
+
     end;
+
+    SetDisplays
+
+  end
+  else if Button = TMouseButton.mbLeft then
+  begin
 
   end;
 
@@ -347,7 +346,7 @@ end;
 
 procedure TFMain.SetDisplays;
 begin
-  Ed_NumMines.Text := NumBombas.ToString.PadLeft(3, '0');
+  Ed_NumMines.Text := (NumBombas - NumBombasColocadas).ToString.PadLeft(3, '0');
 end;
 
 procedure TFMain.SetNivel(N: TNivelPartida);
