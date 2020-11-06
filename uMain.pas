@@ -12,7 +12,7 @@ type
 
   TNivelPartida  = (npPrincipiante, npIntermedio, npExperto);
   TEstadoPartida = (epPartida, epDerrota);
-  TEstadoCasilla = (ecTapado, ecMarcaBomba, ecInterrogante);
+  TEstadoCasilla = (ecTapado, ecMarcaBomba, ecInterrogante, ecDestapado);
 
   TCasilla = class
   public
@@ -122,16 +122,34 @@ type
     procedure IniciaTiempo;
     procedure AsignaEventos;
     procedure IndicaBombasCercanas;
+    procedure Destapa(Image: TImage);
+    procedure ValidaPartida;
   public
     { Public declarations }
 
-    procedure ClicaCasilla(Sender: TObject);
     procedure ImageMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
   end;
 
 var
   FMain: TFMain;
+
+const
+  K_INDEX_CLOSE = 0;
+  K_INDEX_NUM_1 = 1;
+  K_INDEX_NUM_2 = 2;
+  K_INDEX_NUM_3 = 3;
+  K_INDEX_NUM_4 = 4;
+  K_INDEX_NUM_5 = 5;
+  K_INDEX_NUM_6 = 6;
+  K_INDEX_NUM_7 = 7;
+  K_INDEX_NUM_8 = 8;
+  K_INDEX_BOMBI = 9;
+  K_INDEX_BOMBA = 10;
+  K_INDEX_CFLAG = 11;
+  K_INDEX_COPEN = 12;
+  K_INDEX_QUEST = 13;
+  K_INDEX_BOMBE = 14;
 
 implementation
 
@@ -155,8 +173,6 @@ begin
     begin
 
       Image := TImage(FindComponent(concat('Image', X.ToString, Y.ToString)));
-
-      Image.OnClick     := ClicaCasilla;
       Image.OnMouseDown := ImageMouseDown;
 
     end;
@@ -168,17 +184,6 @@ end;
 procedure TFMain.Bt_NuevaPartidaClick(Sender: TObject);
 begin
   Inicia;
-end;
-
-procedure TFMain.ClicaCasilla(Sender: TObject);
-begin
-
-  if Casillas.Items[TImage(Sender).Name].Bomba then
-  begin
-    ShowMessage('¡Bomba!');
-    Estado := epDerrota;
-  end;
-
 end;
 
 procedure TFMain.ColocarBombas;
@@ -216,6 +221,53 @@ begin
 end;
 
 
+procedure TFMain.Destapa(Image: TImage);
+var
+  K_INDEX: integer;
+  X, Y: integer;
+  I, J: integer;
+  AuxX, AuxY: integer;
+  CellName: string;
+begin
+
+  if (Casillas.Items[Image.Name].BombasCerca > 0) then
+    K_INDEX := Casillas.Items[Image.Name].BombasCerca
+  else
+    K_INDEX := K_INDEX_COPEN;
+
+  Image.Picture.Assign(nil);
+
+  Casillas.Items[Image.Name].Estado := ecDestapado;
+  ImageList.GetBitmap(K_INDEX, Image.Picture.Bitmap);
+
+  if (K_INDEX = K_INDEX_COPEN) then
+  begin
+
+    X := StrToInt(copy(Image.Name, 6, 1));
+    Y := StrToInt(copy(Image.Name, 7, 1));
+
+    for I := -1 to 1 do
+    begin
+
+      for J := -1 to 1 do
+      begin
+
+        AuxX := X + J;
+        AuxY := Y + I;
+
+        CellName := concat('Image', AuxX.ToString, AuxY.ToString);
+
+        if (AuxX >= 1) and (AuxY >= 1) and (AuxX <= 8) and (AuxY <= 8) and (Casillas.Items[CellName].Estado = ecTapado) then
+          Destapa(TImage(FindComponent(CellName)));
+
+      end;
+
+    end;
+
+  end;
+
+end;
+
 procedure TFMain.FormCreate(Sender: TObject);
 begin
 
@@ -223,7 +275,6 @@ begin
   Bombas := TList<string>.Create;
 
   SetNivel(npPrincipiante);
-  NumBombasColocadas := 0;
 
   Inicia;
 
@@ -233,13 +284,44 @@ end;
 
 procedure TFMain.IndicaBombasCercanas;
 var
-  I: Integer;
+  Casilla: string;
+  X, Y: integer;
+  AuxX, AuxY: integer;
+  NumBomb: integer;
+  I, J: integer;
 begin
 
-  for I := 0 to Casillas.Count - 1 do
+  for Casilla in Casillas.Keys do
   begin
 
-    //
+    if (not Casillas.Items[Casilla].Bomba) then
+    begin
+
+      NumBomb := 0;
+
+      X := copy(Casilla, 6, 1).ToInteger;
+      Y := copy(Casilla, 7, 1).ToInteger;
+
+      for I := -1 to 1 do
+      begin
+
+        for J := -1 to 1 do
+        begin
+
+          AuxX := X + J;
+          AuxY := Y + I;
+
+          if (AuxX >= 1) and (AuxY >= 1) and (AuxX <= 8) and (AuxY <= 8) then
+            if Casillas.Items[concat('Image', AuxX.ToString, AuxY.ToString)].Bomba then
+              NumBomb := NumBomb + 1;
+
+        end;
+
+      end;
+
+      Casillas.Items[Casilla].BombasCerca := NumBomb;
+
+    end;
 
   end;
 
@@ -252,6 +334,8 @@ begin
 
   InicializaTablero;
 
+  NumBombasColocadas := 0;
+
   SetDisplays;
 
   IniciaTiempo;
@@ -261,14 +345,26 @@ procedure TFMain.InicializaTablero;
 var
   X: Integer;
   Y: Integer;
-  PanelName: string;
+  Image: TImage;
 begin
 
   Casillas.Clear;
 
   for X := 1 to 8 do
+  begin
+
     for Y := 1 to 8 do
+    begin
+
       Casillas.Add(concat('Image', X.ToString, Y.ToString), TCasilla.Create(ecTapado, 0, false));
+
+      Image := TImage(FindComponent(concat('Image', X.ToString, Y.ToString)));
+      Image.Picture.Assign(nil);
+      ImageList.GetBitmap(K_INDEX_CLOSE, Image.Picture.Bitmap);
+
+    end;
+
+  end;
 
   ColocarBombas;
   IndicaBombasCercanas;
@@ -287,58 +383,131 @@ end;
 procedure TFMain.ImageMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
-  Image: TImage;
+  Image, ImageAux: TImage;
   I: Integer;
-  ret: boolean;
+  K_INDEX: integer;
+  Cell: string;
 begin
 
-  if Button = TMouseButton.mbRight then
+  if Estado = epPartida then
   begin
 
     Image := TImage(Sender);
 
-    if Casillas.Items[Image.Name].Estado = ecTapado then
+    if Button = TMouseButton.mbRight then
     begin
 
-      if NumBombas > NumBombasColocadas then
+      if Casillas.Items[Image.Name].Estado = ecTapado then
+      begin
+
+        if NumBombas > NumBombasColocadas then
+        begin
+
+          Image.Picture.Assign(nil);
+
+          NumBombasColocadas := NumBombasColocadas + 1;
+
+          Casillas.Items[Image.Name].Estado := ecMarcaBomba;
+          ImageList.GetBitmap(K_INDEX_CFLAG, Image.Picture.Bitmap);
+
+        end;
+
+      end
+      else if Casillas.Items[Image.Name].Estado = ecMarcaBomba then
       begin
 
         Image.Picture.Assign(nil);
 
-        NumBombasColocadas := NumBombasColocadas + 1;
+        NumBombasColocadas := NumBombasColocadas - 1;
 
-        Casillas.Items[Image.Name].Estado := ecMarcaBomba;
-        ret := ImageList.GetBitmap(9, Image.Picture.Bitmap);
+        Casillas.Items[Image.Name].Estado := ecInterrogante;
+        ImageList.GetBitmap(K_INDEX_QUEST, Image.Picture.Bitmap);
+
+      end
+      else if Casillas.Items[Image.Name].Estado = ecInterrogante then
+      begin
+
+        Image.Picture.Assign(nil);
+
+        Casillas.Items[Image.Name].Estado := ecTapado;
+        ImageList.GetBitmap(K_INDEX_CLOSE, Image.Picture.Bitmap);
 
       end;
 
-    end
-    else if Casillas.Items[Image.Name].Estado = ecMarcaBomba then
-    begin
-
-      Image.Picture.Assign(nil);
-
-      NumBombasColocadas := NumBombasColocadas - 1;
-
-      Casillas.Items[Image.Name].Estado := ecInterrogante;
-      ret := ImageList.GetBitmap(13, Image.Picture.Bitmap);
+      SetDisplays;
 
     end
-    else if Casillas.Items[Image.Name].Estado = ecInterrogante then
+    else if Button = TMouseButton.mbLeft then
     begin
 
-      Image.Picture.Assign(nil);
+      if Casillas.Items[Image.Name].Estado = ecTapado then
+      begin
 
-      Casillas.Items[Image.Name].Estado := ecTapado;
-      ret := ImageList.GetBitmap(0, Image.Picture.Bitmap);
+        if Casillas.Items[Image.Name].Bomba then
+        begin
+
+          Estado := epDerrota;
+          Timer.Enabled := false;
+
+          // TODO SÓLO CMBIAR IMAGEN EN BOMBAS Y BOMBAS ERRONEAS
+
+          for X := 1 to 8 do
+          begin
+
+            for Y := 1 to 8 do
+            begin
+
+              Cell := concat('Image', X.ToString, Y.ToString);
+
+              ImageAux := TImage(FindComponent(concat('Image', X.ToString, Y.ToString)));
+
+              if (Casillas.Items[Cell].Bomba) then
+              begin
+
+                if (Cell = Image.Name) then
+                  K_INDEX := K_INDEX_BOMBA
+                else if (Cell <> Image.Name) and (Casillas.Items[Cell].Estado = ecTapado) then
+                  K_INDEX := K_INDEX_BOMBI
+                else if (Cell <> Image.Name) and (Casillas.Items[Cell].Estado = ecInterrogante) then
+                  K_INDEX := K_INDEX_BOMBI
+                else if (Cell <> Image.Name) and (Casillas.Items[Cell].Estado = ecMarcaBomba) then
+                  K_INDEX := K_INDEX_CFLAG;
+
+                ImageAux.Picture.Assign(nil);
+                ImageList.GetBitmap(K_INDEX, ImageAux.Picture.Bitmap);
+
+              end
+              else
+              begin
+
+                if (Cell <> Image.Name) and (Casillas.Items[Cell].Estado = ecMarcaBomba) then
+                begin
+
+                  ImageAux.Picture.Assign(nil);
+                  ImageList.GetBitmap(K_INDEX_BOMBE, ImageAux.Picture.Bitmap);
+
+                end;
+
+              end;
+
+            end;
+
+          end;
+
+        end
+        else
+        begin
+
+          Destapa(Image);
+
+        end;
+
+      end;
 
     end;
 
-    SetDisplays
-
-  end
-  else if Button = TMouseButton.mbLeft then
-  begin
+    if (NumBombasColocadas = NumBombas) then
+      ValidaPartida;
 
   end;
 
@@ -372,6 +541,11 @@ begin
   Tiempo := Tiempo + 1;
 
   Ed_Time.Text := Tiempo.ToString.PadLeft(3, '0');
+end;
+
+procedure TFMain.ValidaPartida;
+begin
+  //
 end;
 
 { TCasilla }
