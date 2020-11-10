@@ -11,7 +11,7 @@ uses
 type
 
   TNivelPartida  = (npPrincipiante, npIntermedio, npExperto);
-  TEstadoPartida = (epPartida, epDerrota);
+  TEstadoPartida = (epPartida, epDerrota, epVictoria);
   TEstadoCasilla = (ecTapado, ecMarcaBomba, ecInterrogante, ecDestapado);
 
   TCasilla = class
@@ -158,7 +158,15 @@ uses
 
 {$R *.dfm}
 
-{ TForm2 }
+{ TFMain }
+
+//
+//  TEMAS PENDIENTES
+//
+//    * Niveles
+//    * Guardar 3 mejores partidas
+//    * Crear celdas dinámicamente (en código)
+//
 
 procedure TFMain.AsignaEventos;
 var
@@ -449,8 +457,6 @@ begin
           Estado := epDerrota;
           Timer.Enabled := false;
 
-          // TODO SÓLO CMBIAR IMAGEN EN BOMBAS Y BOMBAS ERRONEAS
-
           for X := 1 to 8 do
           begin
 
@@ -544,8 +550,31 @@ begin
 end;
 
 procedure TFMain.ValidaPartida;
+var
+  Casilla: string;
+  Num: integer;
 begin
-  //
+
+  Num := 0;
+
+  for Casilla in Casillas.Keys do
+  begin
+
+    if (Casillas.Items[Casilla].Estado = ecDestapado) or
+       ((Casillas.Items[Casilla].Estado = ecMarcaBomba) and (Casillas.Items[Casilla].Bomba)) then
+      Num := Num + 1;
+
+  end;
+
+  if Num = 64 then
+  begin
+
+    Timer.Enabled = false;
+    ShowMessage('¡Victoria!');
+    Estado := epVictoria;
+
+  end;
+
 end;
 
 { TCasilla }
